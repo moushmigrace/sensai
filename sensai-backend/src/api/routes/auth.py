@@ -21,9 +21,10 @@ async def login_or_signup_user(user_data: UserLoginData) -> Dict:
                 status_code=500, detail="Google Client ID not configured"
             )
 
-        # Verify the token with Google
+        # Verify the token with Google (clock_skew_in_seconds tolerates minor clock drift)
         id_info = id_token.verify_oauth2_token(
-            user_data.id_token, requests.Request(), settings.google_client_id
+            user_data.id_token, requests.Request(), settings.google_client_id,
+            clock_skew_in_seconds=10
         )
 
         # Check that the email in the token matches the provided email

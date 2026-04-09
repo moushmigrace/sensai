@@ -24,6 +24,9 @@ export const authOptions = {
         
         // If this is a Google signin, get userId from backend
         if (account.provider === 'google') {
+          // #region agent log
+          fetch('http://127.0.0.1:7640/ingest/9e632542-188e-41e8-8c19-5fd95ba4a1eb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1ee9a9'},body:JSON.stringify({sessionId:'1ee9a9',location:'route.ts:27',message:'jwt callback - account data',data:{provider:account.provider,hasIdToken:!!account.id_token,hasAccessToken:!!account.access_token,tokenType:account.token_type,scope:account.scope,idTokenType:typeof account.id_token},timestamp:Date.now(),hypothesisId:'A-B'})}).catch(()=>{});
+          // #endregion
           try {
             const result = await registerUserWithBackend(user, account);
             
