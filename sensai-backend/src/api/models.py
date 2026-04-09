@@ -799,3 +799,78 @@ class UpdateIntegrationRequest(BaseModel):
     access_token: str | None = None
     refresh_token: str | None = None
     expires_at: datetime | None = None
+
+
+# ─── Hub / Discussion Board ───────────────────────────────────────────────────
+
+class HubThreadStatus(str, Enum):
+    open = "open"
+    resolved = "resolved"
+    closed = "closed"
+
+
+class HubThreadSortType(str, Enum):
+    latest = "latest"
+    top = "top"
+
+
+class HubAuthorInfo(BaseModel):
+    id: int
+    first_name: str
+    last_name: str | None = None
+
+
+class HubReplyResponse(BaseModel):
+    id: int
+    thread_id: int
+    author: HubAuthorInfo
+    content: str
+    upvote_count: int
+    is_verified: bool
+    created_at: datetime
+
+
+class HubThreadResponse(BaseModel):
+    id: int
+    course_id: int
+    milestone_id: int
+    task_id: int | None
+    author: HubAuthorInfo
+    title: str
+    content: str
+    status: HubThreadStatus
+    upvote_count: int
+    reply_count: int
+    has_verified_reply: bool
+    is_pinned: bool
+    created_at: datetime
+
+
+class ThreadDetailResponse(HubThreadResponse):
+    replies: List[HubReplyResponse] = []
+
+
+class CreateThreadRequest(BaseModel):
+    course_id: int
+    milestone_id: int
+    task_id: int | None = None
+    author_id: int
+    title: str
+    content: str
+
+
+class CreateThreadResponse(BaseModel):
+    id: int
+    title: str
+    created_at: datetime
+
+
+class CreateReplyRequest(BaseModel):
+    author_id: int
+    content: str
+
+
+class CreateReplyResponse(BaseModel):
+    id: int
+    thread_id: int
+    created_at: datetime

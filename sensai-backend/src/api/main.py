@@ -27,6 +27,8 @@ from api.routes import (
     scorecard,
     integration,
 )
+from api.routes.hub import router as hub_router
+from api.db import init_db
 
 # from api.routes.ai import (
 #     resume_pending_task_generation_jobs,
@@ -42,6 +44,9 @@ import sentry_sdk
 async def lifespan(app: FastAPI):
     # Initialize comprehensive logging as the very first step
     logger.info("Starting application")
+
+    # Ensure DB schema and migrations are up to date on every startup
+    await init_db()
 
     scheduler.start()
 
@@ -134,6 +139,7 @@ app.include_router(code.router, prefix="/code", tags=["code"])
 app.include_router(hva.router, prefix="/hva", tags=["hva"])
 app.include_router(websocket_router, prefix="/ws", tags=["websockets"])
 app.include_router(integration.router, prefix="/integrations", tags=["integrations"])
+app.include_router(hub_router)
 
 
 @app.exception_handler(Exception)

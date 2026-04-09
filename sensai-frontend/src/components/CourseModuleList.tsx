@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronUp, ChevronDown, ChevronRight, ChevronDown as ChevronDownExpand, Plus, HelpCircle, Trash, Clipboard, Check, Loader2, Copy, FileText, Brain, BookOpen, PenSquare, FileQuestion, ClipboardList, Lock, Ban } from "lucide-react";
+import Link from "next/link";
+import { ChevronUp, ChevronDown, ChevronRight, ChevronDown as ChevronDownExpand, Plus, HelpCircle, Trash, Clipboard, Check, Loader2, Copy, FileText, Brain, BookOpen, PenSquare, FileQuestion, ClipboardList, Lock, Ban, MessageSquare } from "lucide-react";
 import { Module, ModuleItem, Quiz } from "@/types/course";
 import { QuizQuestion } from "@/types/quiz"; // Import from types instead
 import CourseItemDialog from "@/components/CourseItemDialog";
@@ -848,31 +849,44 @@ export default function CourseModuleList({
 
                                     {/* Add expand/collapse button on the right side for view mode */}
                                     {mode === 'view' && (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                // Prevent toggling locked modules
-                                                if (module.unlockAt) return;
-
-                                                onToggleModule(module.id);
-
-                                            }}
-                                            className={`flex items-center px-3 py-1 text-sm focus:outline-none focus:ring-0 focus:border-0 transition-colors rounded-full border ${module.unlockAt ? 'text-gray-400 dark:text-gray-500 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : 'text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 cursor-pointer'}`}
-                                            aria-label={getIsExpanded(module.id) ? "Collapse module" : "Expand module"}
-                                            disabled={!!module.unlockAt}
-                                        >
-                                            {getIsExpanded(module.id) ? (
-                                                <>
-                                                    <ChevronUp size={16} className="mr-1" />
-                                                    <span className="hidden sm:inline">Collapse</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <ChevronDown size={16} className="mr-1" />
-                                                    <span className="hidden sm:inline">Expand</span>
-                                                </>
+                                        <div className="flex items-center gap-2">
+                                            {schoolId && courseId && !module.unlockAt && (
+                                                <Link
+                                                    href={`/school/${schoolId}/courses/${courseId}/hub/${module.id}`}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="flex items-center px-3 py-1 text-sm rounded-full border border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                                                    aria-label="Discuss this module"
+                                                >
+                                                    <MessageSquare size={13} className="mr-1" />
+                                                    <span className="hidden sm:inline">Discuss</span>
+                                                </Link>
                                             )}
-                                        </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    // Prevent toggling locked modules
+                                                    if (module.unlockAt) return;
+
+                                                    onToggleModule(module.id);
+
+                                                }}
+                                                className={`flex items-center px-3 py-1 text-sm focus:outline-none focus:ring-0 focus:border-0 transition-colors rounded-full border ${module.unlockAt ? 'text-gray-400 dark:text-gray-500 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : 'text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 cursor-pointer'}`}
+                                                aria-label={getIsExpanded(module.id) ? "Collapse module" : "Expand module"}
+                                                disabled={!!module.unlockAt}
+                                            >
+                                                {getIsExpanded(module.id) ? (
+                                                    <>
+                                                        <ChevronUp size={16} className="mr-1" />
+                                                        <span className="hidden sm:inline">Collapse</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <ChevronDown size={16} className="mr-1" />
+                                                        <span className="hidden sm:inline">Expand</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
 
