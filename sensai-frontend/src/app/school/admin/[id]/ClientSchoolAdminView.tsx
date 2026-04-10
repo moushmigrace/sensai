@@ -412,9 +412,10 @@ export default function ClientSchoolAdminView({ id }: { id: string }) {
         if (tab !== 'courses') {
             window.location.hash = tab;
         } else {
-            // Remove hash if it's the courses tab
-            if (window.location.hash && typeof window !== 'undefined' && window.history) {
-                history.pushState("", document.title, window.location.pathname);
+            // Remove hash if it's the courses tab — pass null (not "") so Next.js's
+            // patched pushState can attach its __NA annotation without a TypeError.
+            if (typeof window !== 'undefined' && window.history && window.location.hash) {
+                history.pushState(null, document.title, window.location.pathname);
             }
         }
     };

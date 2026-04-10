@@ -231,5 +231,27 @@ async def cleanup_invalid_chat_history():
         await conn.commit()
 
 
+async def create_hub_tables_migration():
+    """Migration: Creates hub_threads and hub_replies tables (with all indexes) if they don't exist.
+
+    Indexes created:
+      hub_threads: idx_hub_thread_milestone, idx_hub_thread_course, idx_hub_thread_author,
+                   idx_hub_thread_status, idx_hub_thread_task,
+                   idx_hub_thread_sort (composite: milestone_id, is_pinned DESC, upvote_count DESC, created_at DESC)
+      hub_replies:  idx_hub_reply_thread, idx_hub_reply_author,
+                   idx_hub_reply_stream (composite: thread_id, id) — required for SSE polling
+    """
+    async with get_new_db_connection() as conn:
+        cursor = await conn.cursor()
+
+        from api.db import create_hub_threads_table, create_hub_replies_table
+
+        await create_hub_threads_table(cursor)
+        await create_hub_replies_table(cursor)
+
+        await conn.commit()
+
+
 async def run_migrations():
     await cleanup_invalid_chat_history()
+    await create_hub_tables_migration()

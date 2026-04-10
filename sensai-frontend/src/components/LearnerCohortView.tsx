@@ -425,6 +425,8 @@ export default function LearnerCohortView({
                             taskId={taskId}
                             questionId={questionId}
                             onUpdateTaskAndQuestionIdInUrl={onUpdateTaskAndQuestionIdInUrl}
+                            schoolId={schoolId}
+                            courseId={courses[activeCourseIndex]?.id?.toString()}
                         />
                     </div>
                 </div>

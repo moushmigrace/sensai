@@ -43,6 +43,8 @@ interface LearnerCourseViewProps {
     taskId?: string | null;
     questionId?: string | null;
     onUpdateTaskAndQuestionIdInUrl?: (taskId: string | null, questionId: string | null) => void;
+    schoolId?: string;
+    courseId?: string;
 }
 
 export default function LearnerCourseView({
@@ -60,6 +62,8 @@ export default function LearnerCourseView({
     taskId = null,
     questionId = null,
     onUpdateTaskAndQuestionIdInUrl = () => { },
+    schoolId,
+    courseId,
 }: LearnerCourseViewProps) {
     // Get user from auth context
     const { user } = useAuth();
@@ -997,6 +1001,8 @@ export default function LearnerCourseView({
                     onOpenItem={openTaskItem}
                     completedTaskIds={completedTasks}
                     completedQuestionIds={localCompletedQuestionIds}
+                    schoolId={schoolId}
+                    courseId={courseId}
                 />
             ) : (
                 <div className="flex flex-col items-center justify-center py-16 text-center">

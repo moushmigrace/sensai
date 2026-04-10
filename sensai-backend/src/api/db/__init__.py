@@ -32,6 +32,8 @@ from api.config import (
     integrations_table_name,
     assignment_table_name,
     bq_sync_table_name,
+    hub_threads_table_name,
+    hub_replies_table_name,
 )
 from api.db.migration import run_migrations
 
@@ -647,6 +649,84 @@ async def create_code_drafts_table(cursor):
     )
 
 
+async def create_hub_threads_table(cursor):
+    await cursor.execute(
+        f"""CREATE TABLE IF NOT EXISTS {hub_threads_table_name} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                course_id INTEGER NOT NULL,
+                milestone_id INTEGER NOT NULL,
+                task_id INTEGER,
+                author_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'open',
+                upvote_count INTEGER DEFAULT 0,
+                reply_count INTEGER DEFAULT 0,
+                has_verified_reply BOOLEAN DEFAULT FALSE,
+                is_pinned BOOLEAN DEFAULT FALSE,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                deleted_at DATETIME,
+                FOREIGN KEY (course_id) REFERENCES {courses_table_name}(id) ON DELETE CASCADE,
+                FOREIGN KEY (milestone_id) REFERENCES {milestones_table_name}(id) ON DELETE CASCADE,
+                FOREIGN KEY (task_id) REFERENCES {tasks_table_name}(id) ON DELETE SET NULL,
+                FOREIGN KEY (author_id) REFERENCES {users_table_name}(id) ON DELETE CASCADE
+            )"""
+    )
+
+    await cursor.execute(
+        f"CREATE INDEX IF NOT EXISTS idx_hub_thread_milestone ON {hub_threads_table_name} (milestone_id)"
+    )
+    await cursor.execute(
+        f"CREATE INDEX IF NOT EXISTS idx_hub_thread_course ON {hub_threads_table_name} (course_id)"
+    )
+    await cursor.execute(
+        f"CREATE INDEX IF NOT EXISTS idx_hub_thread_author ON {hub_threads_table_name} (author_id)"
+    )
+    await cursor.execute(
+        f"CREATE INDEX IF NOT EXISTS idx_hub_thread_status ON {hub_threads_table_name} (status)"
+    )
+    await cursor.execute(
+        f"CREATE INDEX IF NOT EXISTS idx_hub_thread_task ON {hub_threads_table_name} (task_id)"
+    )
+    # Composite covering index for feed queries (sort by pinned → upvotes → recency).
+    await cursor.execute(
+        f"CREATE INDEX IF NOT EXISTS idx_hub_thread_sort ON {hub_threads_table_name} "
+        f"(milestone_id, is_pinned DESC, upvote_count DESC, created_at DESC)"
+    )
+
+
+async def create_hub_replies_table(cursor):
+    await cursor.execute(
+        f"""CREATE TABLE IF NOT EXISTS {hub_replies_table_name} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                thread_id INTEGER NOT NULL,
+                author_id INTEGER NOT NULL,
+                content TEXT NOT NULL,
+                upvote_count INTEGER DEFAULT 0,
+                is_verified BOOLEAN DEFAULT FALSE,
+                verified_by_id INTEGER,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                deleted_at DATETIME,
+                FOREIGN KEY (thread_id) REFERENCES {hub_threads_table_name}(id) ON DELETE CASCADE,
+                FOREIGN KEY (author_id) REFERENCES {users_table_name}(id) ON DELETE CASCADE,
+                FOREIGN KEY (verified_by_id) REFERENCES {users_table_name}(id) ON DELETE SET NULL
+            )"""
+    )
+
+    await cursor.execute(
+        f"CREATE INDEX IF NOT EXISTS idx_hub_reply_thread ON {hub_replies_table_name} (thread_id)"
+    )
+    await cursor.execute(
+        f"CREATE INDEX IF NOT EXISTS idx_hub_reply_author ON {hub_replies_table_name} (author_id)"
+    )
+    # Composite index for SSE stream polling: "WHERE thread_id = ? AND id > ?" is a pure index scan.
+    await cursor.execute(
+        f"CREATE INDEX IF NOT EXISTS idx_hub_reply_stream ON {hub_replies_table_name} (thread_id, id)"
+    )
+
+
 async def init_db():
     # Ensure the database folder exists
     db_folder = os.path.dirname(sqlite_db_path)
@@ -709,6 +789,9 @@ async def init_db():
             await create_assignment_table(cursor)
 
             await create_bq_sync_table(cursor)
+
+            await create_hub_threads_table(cursor)
+            await create_hub_replies_table(cursor)
 
             await conn.commit()
 
