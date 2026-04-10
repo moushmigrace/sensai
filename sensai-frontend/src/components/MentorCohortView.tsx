@@ -30,6 +30,8 @@ interface MentorCohortViewProps {
     cohort: CohortWithDetails;
     activeCourseIndex?: number; // now optional
     schoolId: string;
+    /** Slug (or route id) for learner hub URLs */
+    schoolSlugForLinks?: string;
     onActiveCourseChange?: (index: number) => void; // new
     batchId?: number | null; // new
     // Props for LearnerCohortView
@@ -43,6 +45,7 @@ export default function MentorCohortView({
     cohort,
     activeCourseIndex = 0, // default to 0
     schoolId,
+    schoolSlugForLinks,
     onActiveCourseChange,
     batchId, // new
     courseModules = [],
@@ -191,6 +194,7 @@ export default function MentorCohortView({
                     courseTitle={courses.length > 1 ? "" : courses[activeCourseIndex]?.name || ""}
                     modules={courseModules}
                     schoolId={schoolId}
+                    schoolSlugForLinks={schoolSlugForLinks}
                     cohortId={cohort.id.toString()}
                     streakDays={2}
                     activeDays={["M", "T"]}

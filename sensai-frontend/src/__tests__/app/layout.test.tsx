@@ -1,6 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import RootLayout, { metadata } from '@/app/layout';
 
+jest.mock('next-auth/next', () => ({
+    getServerSession: jest.fn(() => Promise.resolve(null)),
+}));
+
 // Mock Google Fonts
 jest.mock('next/font/google', () => ({
     Geist: () => ({
@@ -43,14 +47,6 @@ jest.mock('@/context/IntegrationContext', () => {
     };
 });
 
-// Create a test wrapper that extracts the body content
-function TestWrapper({ children }: { children: React.ReactNode }) {
-    const layout = RootLayout({ children });
-    // Extract the body content from the layout
-    const bodyContent = layout.props.children.props.children;
-    return bodyContent;
-}
-
 describe('Layout', () => {
     describe('Metadata', () => {
         it('should have correct title and description', () => {
@@ -60,24 +56,22 @@ describe('Layout', () => {
     });
 
     describe('Layout Structure', () => {
-        it('should render with proper structure', () => {
-            render(
-                <TestWrapper>
-                    <div>Test Content</div>
-                </TestWrapper>
-            );
+        it('should render with proper structure', async () => {
+            const tree = await RootLayout({
+                children: <div>Test Content</div>,
+            });
+            render(tree);
 
             expect(screen.getByTestId('session-provider')).toBeInTheDocument();
             expect(screen.getByTestId('integration-provider')).toBeInTheDocument();
             expect(screen.getByText('Test Content')).toBeInTheDocument();
         });
 
-        it('should wrap children in SessionProvider and IntegrationProvider', () => {
-            render(
-                <TestWrapper>
-                    <div data-testid="test-child">Test Content</div>
-                </TestWrapper>
-            );
+        it('should wrap children in SessionProvider and IntegrationProvider', async () => {
+            const tree = await RootLayout({
+                children: <div data-testid="test-child">Test Content</div>,
+            });
+            render(tree);
 
             const sessionProvider = screen.getByTestId('session-provider');
             const integrationProvider = screen.getByTestId('integration-provider');

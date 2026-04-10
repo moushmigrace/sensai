@@ -1,6 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+<<<<<<< Updated upstream:sensai-frontend/src/components/CourseModuleList.tsx
 import { ChevronUp, ChevronDown, ChevronRight, ChevronDown as ChevronDownExpand, Plus, HelpCircle, Trash, Clipboard, Check, Loader2, Copy, FileText, Brain, BookOpen, PenSquare, FileQuestion, ClipboardList, Lock, Ban, MessageSquare } from "lucide-react";
+=======
+import { ChevronUp, ChevronDown, ChevronRight, ChevronDown as ChevronDownExpand, Plus, HelpCircle, Trash, Clipboard, Check, Loader2, Copy, FileText, Brain, BookOpen, PenSquare, FileQuestion, ClipboardList, Lock, Ban } from "lucide-react";
+>>>>>>> Stashed changes:frontend/sensai-frontend/src/components/CourseModuleList.tsx
 import { Module, ModuleItem, Quiz } from "@/types/course";
 import { QuizQuestion } from "@/types/quiz"; // Import from types instead
 import CourseItemDialog from "@/components/CourseItemDialog";
@@ -850,6 +854,7 @@ export default function CourseModuleList({
                                     {/* Add expand/collapse button on the right side for view mode */}
                                     {mode === 'view' && (
                                         <div className="flex items-center gap-2">
+<<<<<<< Updated upstream:sensai-frontend/src/components/CourseModuleList.tsx
                                             {schoolId && courseId && !module.unlockAt && (
                                                 <Link
                                                     href={`/school/${schoolId}/courses/${courseId}/hub/${module.id}`}
@@ -861,6 +866,8 @@ export default function CourseModuleList({
                                                     <span className="hidden sm:inline">Discuss</span>
                                                 </Link>
                                             )}
+=======
+>>>>>>> Stashed changes:frontend/sensai-frontend/src/components/CourseModuleList.tsx
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();

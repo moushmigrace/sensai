@@ -245,6 +245,7 @@ async def create_hub_tables_migration():
         cursor = await conn.cursor()
 
         from api.db import create_hub_threads_table, create_hub_replies_table
+<<<<<<< Updated upstream:sensai-backend/src/api/db/migration.py
 
         await create_hub_threads_table(cursor)
         await create_hub_replies_table(cursor)
@@ -260,6 +261,14 @@ async def create_hub_thread_embeddings_migration():
         from api.db import create_hub_thread_embeddings_table
 
         await create_hub_thread_embeddings_table(cursor)
+=======
+        from api.db.hub_registry import create_hubs_table, backfill_hubs_from_course_milestones
+
+        await create_hubs_table(cursor)
+        await create_hub_threads_table(cursor)
+        await create_hub_replies_table(cursor)
+        await backfill_hubs_from_course_milestones(cursor)
+>>>>>>> Stashed changes:backend/sensai-backend/src/api/db/migration.py
 
         await conn.commit()
 
@@ -267,4 +276,7 @@ async def create_hub_thread_embeddings_migration():
 async def run_migrations():
     await cleanup_invalid_chat_history()
     await create_hub_tables_migration()
+<<<<<<< Updated upstream:sensai-backend/src/api/db/migration.py
     await create_hub_thread_embeddings_migration()
+=======
+>>>>>>> Stashed changes:backend/sensai-backend/src/api/db/migration.py

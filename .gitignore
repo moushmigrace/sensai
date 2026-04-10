@@ -1,0 +1,23 @@
+# Upstream clone kept alongside this repo for git pull (optional)
+/sensai/
+node_modules/
+frontend/**/node_modules/
+
+# Secrets and local environment (do not commit)
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.local
+
+# Next.js / frontend build
+.next/
+out/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Logs
+*.log
+**/logs/

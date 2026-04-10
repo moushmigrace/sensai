@@ -25,17 +25,30 @@ export async function registerUserWithBackend(
   user: UserData,
   account: AccountData
 ): Promise<any> {
+  const baseUrl = (
+    process.env.BACKEND_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    ""
+  ).replace(/\/$/, "");
 
-  const response = await fetch(`${process.env.BACKEND_URL}/auth/login`, {
-    method: 'POST',
+  if (!baseUrl) {
+    console.error(
+      "registerUserWithBackend: set BACKEND_URL or NEXT_PUBLIC_BACKEND_URL for the Next.js server",
+    );
+    throw new Error("Backend URL is not configured");
+  }
+
+  const response = await fetch(`${baseUrl}/auth/login`, {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
       email: user.email,
-      given_name: user.given_name || user.name?.split(' ')[0] || '',
-      family_name: user.family_name || user.name?.split(' ').slice(1).join(' ') || '',
-      id_token: account.id_token
+      given_name: user.given_name || user.name?.split(" ")[0] || "",
+      family_name:
+        user.family_name || user.name?.split(" ").slice(1).join(" ") || "",
+      id_token: account.id_token,
     }),
   });
 
@@ -43,13 +56,11 @@ export async function registerUserWithBackend(
     throw new Error(`Backend auth failed: ${response.status}`);
   }
 
-  // Return the raw response data - assuming it contains an 'id' field directly
   const data = await response.json();
-  
-  // Make sure the ID exists and is returned properly
+
   if (!data.id) {
     console.error("Backend response missing ID field:", data);
   }
-  
+
   return data;
-} 
+}

@@ -537,6 +537,7 @@ export default function ClientSchoolMemberView({ slug }: { slug: string }) {
                                                                 } as CohortWithDetails}
                                                                 activeCourseIndex={activeCourseIndex}
                                                                 schoolId={school.id.toString()}
+                                                                schoolSlugForLinks={slug}
                                                                 onActiveCourseChange={handleCourseSelect}
                                                                 batchId={selectedBatchId}
                                                                 courseModules={courseModules}
@@ -549,6 +550,7 @@ export default function ClientSchoolMemberView({ slug }: { slug: string }) {
                                                                 courseTitle={courses.length > 1 ? "" : courses[activeCourseIndex].name}
                                                                 modules={courseModules}
                                                                 schoolId={school.id.toString()}
+                                                                schoolSlugForLinks={slug}
                                                                 cohortId={activeCohort?.id.toString()}
                                                                 streakDays={2}
                                                                 activeDays={["M", "T"]}

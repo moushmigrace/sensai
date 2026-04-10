@@ -33,6 +33,7 @@ from api.db.task import (
     create_assignment,
 )
 from api.db.utils import EnumEncoder, get_org_id_for_course
+from api.db.hub_registry import ensure_hub_row_for_milestone
 from api.utils.db import (
     execute_db_operation,
     get_new_db_connection,
@@ -917,6 +918,8 @@ async def add_milestone_to_course(
             f"INSERT INTO {course_milestones_table_name} (course_id, milestone_id, ordering) VALUES (?, ?, ?)",
             (course_id, milestone_id, next_order),
         )
+
+        await ensure_hub_row_for_milestone(cursor, milestone_id, course_id)
 
         await conn.commit()
 

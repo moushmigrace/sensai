@@ -47,14 +47,28 @@ export function useCourses() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   
-  // Fetch courses immediately when user ID is available
+  // Fetch courses when backend user id is available; otherwise avoid infinite loading
+  // (authenticated session without user.id → JWT/backend registration did not set id).
   useEffect(() => {
-    if (!isAuthenticated || !user?.id || authLoading) {
+    if (authLoading) {
       return;
     }
-    
+    if (!isAuthenticated) {
+      setIsLoading(false);
+      return;
+    }
+    if (!user?.id) {
+      setIsLoading(false);
+      setError(
+        new Error(
+          "Could not load your SensAI profile (backend user id missing). Ensure the API is running and BACKEND_URL / NEXT_PUBLIC_BACKEND_URL point to it, then refresh the page or sign out and sign in again.",
+        ),
+      );
+      return;
+    }
+
     setIsLoading(true);
-    
+
     // Simple fetch without caching
     fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/${user.id}/courses`)
       .then(response => {
@@ -104,14 +118,26 @@ export function useSchools() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   
-  // Fetch schools immediately when user ID is available
   useEffect(() => {
-    if (!isAuthenticated || !user?.id || authLoading) {
+    if (authLoading) {
       return;
     }
-    
+    if (!isAuthenticated) {
+      setIsLoading(false);
+      return;
+    }
+    if (!user?.id) {
+      setIsLoading(false);
+      setError(
+        new Error(
+          "Could not load your SensAI profile (backend user id missing). Ensure the API is running and BACKEND_URL / NEXT_PUBLIC_BACKEND_URL point to it, then refresh the page or sign out and sign in again.",
+        ),
+      );
+      return;
+    }
+
     setIsLoading(true);
-    
+
     // Simple fetch without caching
     fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/${user.id}/orgs`)
       .then(response => {

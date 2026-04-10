@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { Course, Cohort } from "@/types";
 import { ChevronDown } from "lucide-react";
 import MobileDropdown, { DropdownOption } from "./MobileDropdown";
+import CourseHubButton from "./hub/CourseHubButton";
 
 // Constants for localStorage keys
 const LAST_INCREMENT_DATE_KEY = 'streak_last_increment_date';
@@ -22,6 +23,8 @@ interface LearnerCohortViewProps {
     courseTitle: string;
     modules: Module[];
     schoolId?: string;
+    /** When set (e.g. school slug), used for `/school/...` hub links; falls back to `schoolId`. */
+    schoolSlugForLinks?: string;
     cohortId?: string;
     streakDays?: number;
     activeDays?: string[];
@@ -44,6 +47,7 @@ export default function LearnerCohortView({
     courseTitle,
     modules,
     schoolId,
+    schoolSlugForLinks,
     cohortId,
     streakDays = 0,
     activeDays = [],
@@ -328,6 +332,9 @@ export default function LearnerCohortView({
         return courses[activeCourseIndex] || null;
     };
 
+    const schoolSegmentForHubs = schoolSlugForLinks ?? schoolId;
+    const activeCourseIdStr = courses[activeCourseIndex]?.id?.toString();
+
     // Clean up event listeners when component unmounts
     useEffect(() => {
         return () => {
@@ -343,6 +350,14 @@ export default function LearnerCohortView({
                 <h1 className="text-2xl md:text-3xl font-light mb-4 md:mb-6 px-1 sm:px-0 text-black dark:text-white">
                     {courseTitle}
                 </h1>
+            )}
+
+            {schoolSegmentForHubs && activeCourseIdStr && (
+                <CourseHubButton
+                    schoolSegment={schoolSegmentForHubs}
+                    courseId={activeCourseIdStr}
+                    modulesFallback={modules}
+                />
             )}
 
             <div className="lg:flex lg:flex-row lg:justify-between">
@@ -425,8 +440,13 @@ export default function LearnerCohortView({
                             taskId={taskId}
                             questionId={questionId}
                             onUpdateTaskAndQuestionIdInUrl={onUpdateTaskAndQuestionIdInUrl}
+<<<<<<< Updated upstream:sensai-frontend/src/components/LearnerCohortView.tsx
                             schoolId={schoolId}
                             courseId={courses[activeCourseIndex]?.id?.toString()}
+=======
+                            schoolId={schoolSegmentForHubs}
+                            courseId={activeCourseIdStr}
+>>>>>>> Stashed changes:frontend/sensai-frontend/src/components/LearnerCohortView.tsx
                         />
                     </div>
                 </div>
@@ -445,7 +465,7 @@ export default function LearnerCohortView({
                         {/* Only show TopPerformers if showTopPerformers is true */}
                         {showTopPerformers && (
                             <TopPerformers
-                                schoolId={schoolId}
+                                schoolId={schoolSegmentForHubs}
                                 cohortId={cohortId}
                                 view='learner'
                             // onEmptyData={handleEmptyPerformersData}

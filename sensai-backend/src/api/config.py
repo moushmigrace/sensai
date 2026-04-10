@@ -62,7 +62,11 @@ bq_sync_table_name = "bq_sync"
 assignment_table_name = "assignment"
 hub_threads_table_name = "hub_threads"
 hub_replies_table_name = "hub_replies"
+<<<<<<< Updated upstream:sensai-backend/src/api/config.py
 hub_thread_embeddings_table_name = "hub_thread_embeddings"
+=======
+hubs_table_name = "hubs"
+>>>>>>> Stashed changes:backend/sensai-backend/src/api/config.py
 
 UPLOAD_FOLDER_NAME = "uploads"
 

@@ -34,7 +34,10 @@ from api.config import (
     bq_sync_table_name,
     hub_threads_table_name,
     hub_replies_table_name,
+<<<<<<< Updated upstream:sensai-backend/src/api/db/__init__.py
     hub_thread_embeddings_table_name,
+=======
+>>>>>>> Stashed changes:backend/sensai-backend/src/api/db/__init__.py
 )
 from api.db.migration import run_migrations
 
@@ -728,6 +731,7 @@ async def create_hub_replies_table(cursor):
     )
 
 
+<<<<<<< Updated upstream:sensai-backend/src/api/db/__init__.py
 async def create_hub_thread_embeddings_table(cursor):
     await cursor.execute(
         f"""CREATE TABLE IF NOT EXISTS {hub_thread_embeddings_table_name} (
@@ -739,6 +743,8 @@ async def create_hub_thread_embeddings_table(cursor):
     )
 
 
+=======
+>>>>>>> Stashed changes:backend/sensai-backend/src/api/db/__init__.py
 async def init_db():
     # Ensure the database folder exists
     db_folder = os.path.dirname(sqlite_db_path)
@@ -802,9 +808,17 @@ async def init_db():
 
             await create_bq_sync_table(cursor)
 
+<<<<<<< Updated upstream:sensai-backend/src/api/db/__init__.py
             await create_hub_threads_table(cursor)
             await create_hub_replies_table(cursor)
             await create_hub_thread_embeddings_table(cursor)
+=======
+            from api.db.hub_registry import create_hubs_table
+
+            await create_hubs_table(cursor)
+            await create_hub_threads_table(cursor)
+            await create_hub_replies_table(cursor)
+>>>>>>> Stashed changes:backend/sensai-backend/src/api/db/__init__.py
 
             await conn.commit()
 

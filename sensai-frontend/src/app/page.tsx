@@ -166,6 +166,12 @@ export default function Home() {
             </div>
           )}
 
+          {error && !isLoading && (
+            <div className="mb-6 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200 text-center">
+              {error.message}
+            </div>
+          )}
+
           {/* Content when loaded */}
           {!isLoading && (
             <>
