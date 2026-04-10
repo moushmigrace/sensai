@@ -1330,6 +1330,8 @@ export default function LearnerCourseView({
                                                 viewOnly={viewOnly}
                                                 onTaskComplete={handleTaskCompletion}
                                                 onAiRespondingChange={handleAiRespondingChange}
+                                                schoolId={schoolId}
+                                                courseId={courseId}
                                             />
                                         )}
                                     </>

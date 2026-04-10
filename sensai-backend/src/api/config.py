@@ -62,6 +62,7 @@ bq_sync_table_name = "bq_sync"
 assignment_table_name = "assignment"
 hub_threads_table_name = "hub_threads"
 hub_replies_table_name = "hub_replies"
+hub_thread_embeddings_table_name = "hub_thread_embeddings"
 
 UPLOAD_FOLDER_NAME = "uploads"
 

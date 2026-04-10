@@ -1,12 +1,15 @@
 "use client";
 
-import { useCallback, useMemo, useState, useEffect } from "react";
+import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import BlockNoteEditor from "./BlockNoteEditor";
 import ChatView from "./ChatView";
 import ScorecardView from "./ScorecardView";
+import RelatedDiscussions from "./hub/RelatedDiscussions";
 import { ChatMessage, ScorecardItem } from "../types/quiz";
+import { HubThread } from "../types/hub";
 import { getDraft, setDraft, deleteDraft } from '@/lib/utils/indexedDB';
 import { blobToBase64, convertAudioBufferToWav } from '@/lib/utils/audioUtils';
+import { getSuggestions } from '@/lib/hub-api';
 import Toast from "./Toast";
 
 import { CheckCircle } from "lucide-react";
@@ -32,6 +35,9 @@ interface LearnerAssignmentViewProps {
     className?: string;
     onTaskComplete?: (taskId: string, isComplete: boolean) => void;
     onAiRespondingChange?: (isResponding: boolean) => void;
+    /** Required for building hub discussion links */
+    schoolId?: string;
+    courseId?: string;
 }
 
 // Local chat message type aligned with ChatView expectations
@@ -70,10 +76,20 @@ export default function LearnerAssignmentView({
     className = "",
     onTaskComplete,
     onAiRespondingChange,
+    schoolId = "",
+    courseId = "",
 }: LearnerAssignmentViewProps) {
     const { user } = useAuth();
     // Use global theme (html.dark) as the source of truth.
     const { isDarkMode } = useThemePreference();
+
+    // Track when this component mounted (for time-based struggle detection)
+    const mountTimeRef = useRef<number>(Date.now());
+
+    // Related discussions suggestion state
+    const [suggestions, setSuggestions] = useState<HubThread[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [suggestionsFetched, setSuggestionsFetched] = useState(false);
 
     // Data fetching state
     const [isLoadingAssignment, setIsLoadingAssignment] = useState(true);
@@ -173,11 +189,56 @@ export default function LearnerAssignmentView({
         fetchAssignmentData();
     }, [taskId, hasFetchedData]);
 
-    // Reset hasFetchedData when taskId changes
+    // Reset hasFetchedData and suggestion state when taskId changes
     useEffect(() => {
         setHasFetchedData(false);
+        setSuggestions([]);
+        setShowSuggestions(false);
+        setSuggestionsFetched(false);
+        mountTimeRef.current = Date.now();
     }, [taskId]);
 
+
+    // Fetch related discussions for the current task
+    const fetchSuggestions = useCallback(async () => {
+        if (!taskId || !userId || isTestMode || suggestionsFetched) return;
+        setSuggestionsFetched(true);
+        try {
+            const results = await getSuggestions(taskId, userId);
+            if (results.length > 0) {
+                setSuggestions(results);
+                setShowSuggestions(true);
+            }
+        } catch {
+            // Silently ignore — suggestions are non-critical
+        }
+    }, [taskId, userId, isTestMode, suggestionsFetched]);
+
+    // Struggle detection: watch chat history for signals
+    const CONFUSION_KEYWORDS = ['confused', "don't understand", 'stuck', 'help me', 'not sure', 'how do i', "don't know", 'lost', 'no idea'];
+    useEffect(() => {
+        if (isTestMode || suggestionsFetched || !taskId || !userId) return;
+
+        const userMessages = chatHistory.filter(m => m.sender === 'user');
+        const attempts = userMessages.length;
+        const timeSpentMs = Date.now() - mountTimeRef.current;
+        const lastUserMsg = userMessages[userMessages.length - 1]?.content?.toLowerCase() ?? '';
+        const isConfused = CONFUSION_KEYWORDS.some(k => lastUserMsg.includes(k));
+
+        if (attempts >= 2 || isConfused || timeSpentMs > 90_000) {
+            fetchSuggestions();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [chatHistory, taskId, userId, isTestMode, suggestionsFetched, fetchSuggestions]);
+
+    // Timer-based struggle detection: trigger after 90s even with no chat activity
+    useEffect(() => {
+        if (isTestMode || !taskId || !userId) return;
+        const timer = setTimeout(() => {
+            fetchSuggestions();
+        }, 90_000);
+        return () => clearTimeout(timer);
+    }, [taskId, userId, isTestMode, fetchSuggestions]);
 
     // Handle assignment response based on evaluation status
     const handleAssignmentResponse = useCallback((response: AssignmentResponse) => {
@@ -1194,6 +1255,16 @@ export default function LearnerAssignmentView({
                             )}
                         </div>
                     </div>
+
+                    {/* Related Discussions panel — shown when struggle is detected */}
+                    {showSuggestions && suggestions.length > 0 && schoolId && courseId && (
+                        <RelatedDiscussions
+                            threads={suggestions}
+                            schoolId={schoolId}
+                            courseId={courseId}
+                            onDismiss={() => setShowSuggestions(false)}
+                        />
+                    )}
                 </div>
 
                 {/* Right: Upload + Chat */}

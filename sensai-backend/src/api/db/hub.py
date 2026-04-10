@@ -1,8 +1,11 @@
 """DB helper functions for the Hub discussion feature."""
 
+import json
+
 from api.config import (
     hub_threads_table_name,
     hub_replies_table_name,
+    hub_thread_embeddings_table_name,
     users_table_name,
 )
 from api.utils.db import get_new_db_connection
@@ -236,6 +239,51 @@ async def delete_reply(reply_id: int, thread_id: int) -> None:
             (thread_id,),
         )
         await conn.commit()
+
+
+# ── Embeddings ────────────────────────────────────────────────────────────────
+
+
+async def store_thread_embedding(thread_id: int, embedding: list[float]) -> None:
+    """Upsert the embedding vector for a hub thread (stored as a JSON array)."""
+    embedding_json = json.dumps(embedding)
+    async with get_new_db_connection() as conn:
+        cursor = await conn.cursor()
+        await cursor.execute(
+            f"""INSERT INTO {hub_thread_embeddings_table_name} (thread_id, embedding)
+                VALUES (?, ?)
+                ON CONFLICT(thread_id) DO UPDATE SET embedding = excluded.embedding""",
+            (thread_id, embedding_json),
+        )
+        await conn.commit()
+
+
+async def get_threads_with_embeddings(milestone_id: int) -> list[dict]:
+    """Return all non-deleted threads for a milestone that have a stored embedding."""
+    async with get_new_db_connection() as conn:
+        cursor = await conn.cursor()
+        await cursor.execute(
+            f"""SELECT
+                    t.id, t.course_id, t.milestone_id, t.task_id,
+                    t.author_id, u.first_name, u.last_name,
+                    t.title, t.content, t.status,
+                    t.upvote_count, t.reply_count, t.has_verified_reply, t.is_pinned,
+                    t.created_at, e.embedding
+                FROM {hub_threads_table_name} t
+                JOIN {users_table_name} u ON u.id = t.author_id
+                JOIN {hub_thread_embeddings_table_name} e ON e.thread_id = t.id
+                WHERE t.milestone_id = ?
+                  AND t.deleted_at IS NULL""",
+            (milestone_id,),
+        )
+        rows = await cursor.fetchall()
+
+    result = []
+    for row in rows:
+        thread = _row_to_thread_dict(row[:15])
+        thread["embedding"] = json.loads(row[15])
+        result.append(thread)
+    return result
 
 
 # ── Private helpers ───────────────────────────────────────────────────────────

@@ -252,6 +252,19 @@ async def create_hub_tables_migration():
         await conn.commit()
 
 
+async def create_hub_thread_embeddings_migration():
+    """Migration: Creates hub_thread_embeddings table if it doesn't exist."""
+    async with get_new_db_connection() as conn:
+        cursor = await conn.cursor()
+
+        from api.db import create_hub_thread_embeddings_table
+
+        await create_hub_thread_embeddings_table(cursor)
+
+        await conn.commit()
+
+
 async def run_migrations():
     await cleanup_invalid_chat_history()
     await create_hub_tables_migration()
+    await create_hub_thread_embeddings_migration()

@@ -34,6 +34,7 @@ from api.config import (
     bq_sync_table_name,
     hub_threads_table_name,
     hub_replies_table_name,
+    hub_thread_embeddings_table_name,
 )
 from api.db.migration import run_migrations
 
@@ -727,6 +728,17 @@ async def create_hub_replies_table(cursor):
     )
 
 
+async def create_hub_thread_embeddings_table(cursor):
+    await cursor.execute(
+        f"""CREATE TABLE IF NOT EXISTS {hub_thread_embeddings_table_name} (
+                thread_id INTEGER PRIMARY KEY,
+                embedding TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (thread_id) REFERENCES {hub_threads_table_name}(id) ON DELETE CASCADE
+            )"""
+    )
+
+
 async def init_db():
     # Ensure the database folder exists
     db_folder = os.path.dirname(sqlite_db_path)
@@ -792,6 +804,7 @@ async def init_db():
 
             await create_hub_threads_table(cursor)
             await create_hub_replies_table(cursor)
+            await create_hub_thread_embeddings_table(cursor)
 
             await conn.commit()
 

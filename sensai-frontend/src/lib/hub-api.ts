@@ -108,6 +108,28 @@ export async function deleteReply(
     });
 }
 
+// ── Suggestions ───────────────────────────────────────────────────────────────
+
+/**
+ * Fetch semantically relevant hub threads for a student working on a task.
+ * Returns an empty array on any error so callers don't need to handle failures.
+ */
+export async function getSuggestions(
+    taskId: string,
+    userId: string,
+): Promise<HubThread[]> {
+    try {
+        const res = await fetch(
+            `${BASE}/hub/suggestions?task_id=${encodeURIComponent(taskId)}&user_id=${encodeURIComponent(userId)}`,
+            { cache: "no-store" },
+        );
+        if (!res.ok) return [];
+        return res.json();
+    } catch {
+        return [];
+    }
+}
+
 // ── SSE stream ────────────────────────────────────────────────────────────────
 
 /**
