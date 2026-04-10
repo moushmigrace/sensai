@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ArrowUp, CheckCircle, Send } from "lucide-react";
+import { ArrowLeft, ArrowUp, CheckCircle, Send, BarChart2 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import {
     getThread,
@@ -11,9 +11,11 @@ import {
     resolveThread,
     verifyReply,
     openReplyStream,
+    getPollResults,
 } from "@/lib/hub-api";
-import type { HubThreadDetail, HubReply } from "@/types/hub";
+import type { HubThreadDetail, HubReply, PollResult } from "@/types/hub";
 import ReplyCard from "@/components/hub/ReplyCard";
+import PollView from "@/components/hub/PollView";
 
 export default function ThreadDetailPage() {
     const params = useParams<{
@@ -32,12 +34,15 @@ export default function ThreadDetailPage() {
     const [replyContent, setReplyContent] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [upvoted, setUpvoted] = useState(false);
+    const [pollResult, setPollResult] = useState<PollResult | null>(null);
+    const [pollLoading, setPollLoading] = useState(false);
 
     const lastReplyIdRef = useRef(0);
     const esRef = useRef<EventSource | null>(null);
 
-    // Initial fetch
+    // Effect 1: load thread + replies (no user dependency — avoids double-fetch)
     useEffect(() => {
+        setLoading(true);
         getThread(threadId)
             .then((data) => {
                 setThread(data);
@@ -48,6 +53,17 @@ export default function ThreadDetailPage() {
             })
             .finally(() => setLoading(false));
     }, [threadId]);
+
+    // Effect 2: load poll results — fires only when thread is a poll AND user is known
+    // Separated so that auth loading after thread loading doesn't re-fetch the thread.
+    useEffect(() => {
+        if (!thread || thread.thread_type !== "poll" || !user) return;
+        setPollLoading(true);
+        getPollResults(thread.id, parseInt(user.id))
+            .then(setPollResult)
+            .catch(() => {})
+            .finally(() => setPollLoading(false));
+    }, [thread?.id, thread?.thread_type, user?.id]);
 
     // SSE subscription — opens after initial data loaded
     useEffect(() => {
@@ -131,6 +147,8 @@ export default function ThreadDetailPage() {
         );
     }
 
+    const isPoll = thread.thread_type === "poll";
+
     return (
         <div className="space-y-6">
             {/* Back */}
@@ -164,13 +182,49 @@ export default function ThreadDetailPage() {
                                     Resolved
                                 </span>
                             )}
+                            {isPoll && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400">
+                                    <BarChart2 size={10} />
+                                    Poll
+                                </span>
+                            )}
                             <h1 className="text-base font-semibold text-gray-900 dark:text-white">
                                 {thread.title}
                             </h1>
                         </div>
-                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                            {thread.content}
-                        </p>
+
+                        {/* Poll rendering */}
+                        {isPoll ? (
+                            <>
+                                {thread.content && (
+                                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap mb-1">
+                                        {thread.content}
+                                    </p>
+                                )}
+                                {pollLoading ? (
+                                    <div className="flex items-center gap-2 mt-3 text-xs text-gray-400 dark:text-gray-500">
+                                        <div className="w-3 h-3 border border-gray-300 border-t-indigo-500 rounded-full animate-spin" />
+                                        Loading poll…
+                                    </div>
+                                ) : pollResult && user ? (
+                                    <PollView
+                                        threadId={thread.id}
+                                        userId={parseInt(user.id)}
+                                        initialResult={pollResult}
+                                    />
+                                ) : !user ? (
+                                    <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
+                                        Sign in to vote on this poll.
+                                    </p>
+                                ) : null}
+                            </>
+                        ) : (
+                            /* Regular question rendering */
+                            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                                {thread.content}
+                            </p>
+                        )}
+
                         <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-gray-400 dark:text-gray-500">
                             <span>{authorName}</span>
                             <span>·</span>

@@ -4,6 +4,7 @@ import type {
     HubReply,
     CreateThreadPayload,
     CreateReplyPayload,
+    PollResult,
 } from "@/types/hub";
 
 const BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -128,6 +129,35 @@ export async function getSuggestions(
     } catch {
         return [];
     }
+}
+
+// ── Poll ──────────────────────────────────────────────────────────────────────
+
+export async function getPollResults(
+    threadId: number,
+    userId: number,
+): Promise<PollResult> {
+    const res = await fetch(
+        `${BASE}/hub/threads/${threadId}/poll?user_id=${userId}`,
+        { cache: "no-store" },
+    );
+    if (!res.ok) throw new Error("Failed to fetch poll results");
+    return res.json();
+}
+
+export async function castPollVote(
+    threadId: number,
+    userId: number,
+    optionId: number,
+): Promise<PollResult> {
+    const res = await fetch(`${BASE}/hub/threads/${threadId}/poll/vote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId, option_id: optionId }),
+    });
+    if (res.status === 409) throw new Error("already_voted");
+    if (!res.ok) throw new Error("Failed to cast vote");
+    return res.json();
 }
 
 // ── SSE stream ────────────────────────────────────────────────────────────────

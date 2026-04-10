@@ -264,7 +264,32 @@ async def create_hub_thread_embeddings_migration():
         await conn.commit()
 
 
+async def add_thread_type_column_migration():
+    """Add thread_type column to hub_threads for existing databases."""
+    async with get_new_db_connection() as conn:
+        cursor = await conn.cursor()
+        await cursor.execute("PRAGMA table_info(hub_threads)")
+        cols = [row[1] for row in await cursor.fetchall()]
+        if "thread_type" not in cols:
+            await cursor.execute(
+                "ALTER TABLE hub_threads ADD COLUMN thread_type TEXT NOT NULL DEFAULT 'question'"
+            )
+        await conn.commit()
+
+
+async def create_hub_poll_tables_migration():
+    """Create hub_poll_options and hub_poll_votes tables if they don't exist."""
+    async with get_new_db_connection() as conn:
+        cursor = await conn.cursor()
+        from api.db import create_hub_poll_options_table, create_hub_poll_votes_table
+        await create_hub_poll_options_table(cursor)
+        await create_hub_poll_votes_table(cursor)
+        await conn.commit()
+
+
 async def run_migrations():
     await cleanup_invalid_chat_history()
     await create_hub_tables_migration()
     await create_hub_thread_embeddings_migration()
+    await add_thread_type_column_migration()
+    await create_hub_poll_tables_migration()

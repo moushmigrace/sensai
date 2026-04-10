@@ -803,6 +803,11 @@ class UpdateIntegrationRequest(BaseModel):
 
 # ─── Hub / Discussion Board ───────────────────────────────────────────────────
 
+class HubThreadType(str, Enum):
+    question = "question"
+    poll = "poll"
+
+
 class HubThreadStatus(str, Enum):
     open = "open"
     resolved = "resolved"
@@ -839,6 +844,7 @@ class HubThreadResponse(BaseModel):
     title: str
     content: str
     status: HubThreadStatus
+    thread_type: HubThreadType = HubThreadType.question
     upvote_count: int
     reply_count: int
     has_verified_reply: bool
@@ -850,6 +856,26 @@ class ThreadDetailResponse(HubThreadResponse):
     replies: List[HubReplyResponse] = []
 
 
+class PollOptionResponse(BaseModel):
+    id: int
+    text: str
+    vote_count: int
+    position: int
+    voted: bool
+
+
+class PollResultResponse(BaseModel):
+    total_votes: int
+    user_voted: bool
+    user_option_id: int | None
+    options: List[PollOptionResponse]
+
+
+class PollVoteRequest(BaseModel):
+    user_id: int
+    option_id: int
+
+
 class CreateThreadRequest(BaseModel):
     course_id: int
     milestone_id: int
@@ -857,6 +883,8 @@ class CreateThreadRequest(BaseModel):
     author_id: int
     title: str
     content: str
+    thread_type: HubThreadType = HubThreadType.question
+    poll_options: List[str] | None = None
 
 
 class CreateThreadResponse(BaseModel):

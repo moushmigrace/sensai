@@ -63,6 +63,8 @@ assignment_table_name = "assignment"
 hub_threads_table_name = "hub_threads"
 hub_replies_table_name = "hub_replies"
 hub_thread_embeddings_table_name = "hub_thread_embeddings"
+hub_poll_options_table_name = "hub_poll_options"
+hub_poll_votes_table_name = "hub_poll_votes"
 
 UPLOAD_FOLDER_NAME = "uploads"
 

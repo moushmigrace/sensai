@@ -24,6 +24,9 @@ from api.db.hub import (
     pin_thread,
     delete_thread,
     delete_reply,
+    create_poll_options,
+    get_poll_results,
+    cast_poll_vote,
 )
 from api.db.task import get_basic_task_details, get_task_metadata
 from api.models import (
@@ -35,6 +38,9 @@ from api.models import (
     HubReplyResponse,
     ThreadDetailResponse,
     HubThreadSortType,
+    HubThreadType,
+    PollResultResponse,
+    PollVoteRequest,
 )
 from api.utils.db import get_new_db_connection
 from api.utils.embeddings import cosine_similarity, get_embedding
@@ -92,6 +98,13 @@ async def list_threads(
 
 @router.post("/threads", response_model=CreateThreadResponse)
 async def create_new_thread(body: CreateThreadRequest, background_tasks: BackgroundTasks):
+    if body.thread_type == HubThreadType.poll:
+        options = [o.strip() for o in (body.poll_options or []) if o.strip()]
+        if len(options) < 2:
+            raise HTTPException(status_code=422, detail="Polls require at least 2 non-empty options")
+        if len(options) > 10:
+            raise HTTPException(status_code=422, detail="Polls allow at most 10 options")
+
     thread_id = await create_thread(
         course_id=body.course_id,
         milestone_id=body.milestone_id,
@@ -99,7 +112,13 @@ async def create_new_thread(body: CreateThreadRequest, background_tasks: Backgro
         title=body.title,
         content=body.content,
         task_id=body.task_id,
+        thread_type=body.thread_type.value,
     )
+
+    if body.thread_type == HubThreadType.poll and body.poll_options:
+        clean_options = [o.strip() for o in body.poll_options if o.strip()]
+        await create_poll_options(thread_id, clean_options)
+
     thread = await get_thread_by_id(thread_id)
     if thread is None:
         raise HTTPException(status_code=500, detail="Failed to create thread")
@@ -188,6 +207,40 @@ async def verify_reply_endpoint(thread_id: int, reply_id: int, verified_by_id: i
 async def delete_reply_endpoint(thread_id: int, reply_id: int):
     await delete_reply(reply_id=reply_id, thread_id=thread_id)
     return {"success": True}
+
+
+# ── Poll endpoints ────────────────────────────────────────────────────────────
+
+
+@router.get("/threads/{thread_id}/poll", response_model=PollResultResponse)
+async def get_poll(
+    thread_id: int,
+    user_id: int = Query(..., description="ID of the requesting user (to check if they voted)"),
+):
+    """Return poll options with live vote counts and the user's voting state."""
+    thread = await get_thread_by_id(thread_id)
+    if thread is None:
+        raise HTTPException(status_code=404, detail="Thread not found")
+    if thread["thread_type"] != "poll":
+        raise HTTPException(status_code=400, detail="Thread is not a poll")
+    return await get_poll_results(thread_id, user_id)
+
+
+@router.post("/threads/{thread_id}/poll/vote", response_model=PollResultResponse)
+async def vote_on_poll(thread_id: int, body: PollVoteRequest):
+    """Cast a vote on a poll option. Returns the updated poll results.
+
+    Returns 409 if the user has already voted.
+    """
+    thread = await get_thread_by_id(thread_id)
+    if thread is None:
+        raise HTTPException(status_code=404, detail="Thread not found")
+    if thread["thread_type"] != "poll":
+        raise HTTPException(status_code=400, detail="Thread is not a poll")
+    try:
+        return await cast_poll_vote(thread_id, body.option_id, body.user_id)
+    except ValueError:
+        raise HTTPException(status_code=409, detail="You have already voted on this poll")
 
 
 # ── Suggestions ───────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, MessageSquare, CheckCircle, Pin } from "lucide-react";
+import { ArrowUp, MessageSquare, CheckCircle, Pin, BarChart2 } from "lucide-react";
 import type { HubThread } from "@/types/hub";
 import { upvoteThread } from "@/lib/hub-api";
 import { useState } from "react";
@@ -59,6 +59,12 @@ export default function ThreadCard({ thread, schoolId, courseId }: ThreadCardPro
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400">
                             <Pin size={10} />
                             Pinned
+                        </span>
+                    )}
+                    {thread.thread_type === "poll" && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400">
+                            <BarChart2 size={10} />
+                            Poll
                         </span>
                     )}
                     {thread.status === "resolved" && (

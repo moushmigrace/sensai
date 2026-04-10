@@ -6,6 +6,8 @@ from api.config import (
     hub_threads_table_name,
     hub_replies_table_name,
     hub_thread_embeddings_table_name,
+    hub_poll_options_table_name,
+    hub_poll_votes_table_name,
     users_table_name,
 )
 from api.utils.db import get_new_db_connection
@@ -21,15 +23,16 @@ async def create_thread(
     title: str,
     content: str,
     task_id: int | None = None,
+    thread_type: str = "question",
 ) -> int:
     """Insert a new thread and return its id."""
     async with get_new_db_connection() as conn:
         cursor = await conn.cursor()
         await cursor.execute(
             f"""INSERT INTO {hub_threads_table_name}
-                (course_id, milestone_id, task_id, author_id, title, content)
-                VALUES (?, ?, ?, ?, ?, ?)""",
-            (course_id, milestone_id, task_id, author_id, title, content),
+                (course_id, milestone_id, task_id, author_id, title, content, thread_type)
+                VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (course_id, milestone_id, task_id, author_id, title, content, thread_type),
         )
         thread_id = cursor.lastrowid
         await conn.commit()
@@ -57,7 +60,7 @@ async def get_threads_for_milestone(
                     t.author_id, u.first_name, u.last_name,
                     t.title, t.content, t.status,
                     t.upvote_count, t.reply_count, t.has_verified_reply, t.is_pinned,
-                    t.created_at
+                    t.created_at, t.thread_type
                 FROM {hub_threads_table_name} t
                 JOIN {users_table_name} u ON u.id = t.author_id
                 WHERE t.milestone_id = ?
@@ -81,7 +84,7 @@ async def get_thread_by_id(thread_id: int) -> dict | None:
                     t.author_id, u.first_name, u.last_name,
                     t.title, t.content, t.status,
                     t.upvote_count, t.reply_count, t.has_verified_reply, t.is_pinned,
-                    t.created_at
+                    t.created_at, t.thread_type
                 FROM {hub_threads_table_name} t
                 JOIN {users_table_name} u ON u.id = t.author_id
                 WHERE t.id = ?
@@ -268,7 +271,7 @@ async def get_threads_with_embeddings(milestone_id: int) -> list[dict]:
                     t.author_id, u.first_name, u.last_name,
                     t.title, t.content, t.status,
                     t.upvote_count, t.reply_count, t.has_verified_reply, t.is_pinned,
-                    t.created_at, e.embedding
+                    t.created_at, t.thread_type, e.embedding
                 FROM {hub_threads_table_name} t
                 JOIN {users_table_name} u ON u.id = t.author_id
                 JOIN {hub_thread_embeddings_table_name} e ON e.thread_id = t.id
@@ -280,8 +283,8 @@ async def get_threads_with_embeddings(milestone_id: int) -> list[dict]:
 
     result = []
     for row in rows:
-        thread = _row_to_thread_dict(row[:15])
-        thread["embedding"] = json.loads(row[15])
+        thread = _row_to_thread_dict(row[:16])
+        thread["embedding"] = json.loads(row[16])
         result.append(thread)
     return result
 
@@ -295,7 +298,7 @@ def _row_to_thread_dict(row: tuple) -> dict:
         author_id, first_name, last_name,
         title, content, status,
         upvote_count, reply_count, has_verified_reply, is_pinned,
-        created_at,
+        created_at, thread_type,
     ) = row
     return {
         "id": id_,
@@ -306,12 +309,87 @@ def _row_to_thread_dict(row: tuple) -> dict:
         "title": title,
         "content": content,
         "status": status,
+        "thread_type": thread_type or "question",
         "upvote_count": upvote_count,
         "reply_count": reply_count,
         "has_verified_reply": bool(has_verified_reply),
         "is_pinned": bool(is_pinned),
         "created_at": created_at,
     }
+
+
+# ── Poll helpers ─────────────────────────────────────────────────────────────
+
+
+async def create_poll_options(thread_id: int, options: list[str]) -> None:
+    """Insert poll option rows for a newly created poll thread."""
+    async with get_new_db_connection() as conn:
+        cursor = await conn.cursor()
+        for i, text in enumerate(options):
+            await cursor.execute(
+                f"""INSERT INTO {hub_poll_options_table_name}
+                    (thread_id, text, position) VALUES (?, ?, ?)""",
+                (thread_id, text.strip(), i),
+            )
+        await conn.commit()
+
+
+async def get_poll_results(thread_id: int, user_id: int) -> dict:
+    """Return options with live vote counts and whether this user has voted."""
+    async with get_new_db_connection() as conn:
+        cursor = await conn.cursor()
+        await cursor.execute(
+            f"""SELECT
+                    o.id, o.text, o.vote_count, o.position,
+                    CASE WHEN v.user_id IS NOT NULL THEN 1 ELSE 0 END AS voted
+                FROM {hub_poll_options_table_name} o
+                LEFT JOIN {hub_poll_votes_table_name} v
+                    ON v.option_id = o.id AND v.user_id = ?
+                WHERE o.thread_id = ? AND o.deleted_at IS NULL
+                ORDER BY o.position""",
+            (user_id, thread_id),
+        )
+        rows = await cursor.fetchall()
+
+    total_votes = sum(r[2] for r in rows)
+    user_voted = any(r[4] for r in rows)
+    user_option_id = next((r[0] for r in rows if r[4]), None)
+
+    return {
+        "total_votes": total_votes,
+        "user_voted": bool(user_voted),
+        "user_option_id": user_option_id,
+        "options": [
+            {
+                "id": r[0],
+                "text": r[1],
+                "vote_count": r[2],
+                "position": r[3],
+                "voted": bool(r[4]),
+            }
+            for r in rows
+        ],
+    }
+
+
+async def cast_poll_vote(thread_id: int, option_id: int, user_id: int) -> dict:
+    """Record a vote. Raises ValueError('already_voted') if user already voted."""
+    async with get_new_db_connection() as conn:
+        cursor = await conn.cursor()
+        await cursor.execute(
+            f"""INSERT OR IGNORE INTO {hub_poll_votes_table_name}
+                (thread_id, option_id, user_id) VALUES (?, ?, ?)""",
+            (thread_id, option_id, user_id),
+        )
+        inserted = cursor.rowcount
+        if inserted == 0:
+            raise ValueError("already_voted")
+        await cursor.execute(
+            f"UPDATE {hub_poll_options_table_name} SET vote_count = vote_count + 1 WHERE id = ?",
+            (option_id,),
+        )
+        await conn.commit()
+    return await get_poll_results(thread_id, user_id)
 
 
 def _row_to_reply_dict(row: tuple) -> dict:

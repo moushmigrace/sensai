@@ -24,6 +24,7 @@ export default function ThreadFeed({
     const [sort, setSort] = useState<"latest" | "top">("latest");
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [fetchError, setFetchError] = useState(false);
 
     const load = useCallback(
         async (showSpinner = false) => {
@@ -31,6 +32,9 @@ export default function ThreadFeed({
             try {
                 const data = await getThreadsForMilestone(milestoneId, sort);
                 setThreads(data);
+                setFetchError(false);
+            } catch {
+                setFetchError(true);
             } finally {
                 setLoading(false);
                 setRefreshing(false);
@@ -101,6 +105,18 @@ export default function ThreadFeed({
                             className="h-20 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse"
                         />
                     ))}
+                </div>
+            ) : fetchError ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Could not load discussions. Make sure the server is running.
+                    </p>
+                    <button
+                        onClick={() => load(true)}
+                        className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+                    >
+                        Try again
+                    </button>
                 </div>
             ) : threads.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">

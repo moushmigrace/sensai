@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import ThreadFeed from "@/components/hub/ThreadFeed";
 
 interface Props {
-    params: { id: string; courseId: string; milestoneId: string };
+    params: Promise<{ id: string; courseId: string; milestoneId: string }>;
 }
 
 async function getMilestoneName(milestoneId: string): Promise<string> {
@@ -20,7 +20,7 @@ async function getMilestoneName(milestoneId: string): Promise<string> {
 }
 
 export default async function HubMilestonePage({ params }: Props) {
-    const { id: schoolId, courseId, milestoneId } = params;
+    const { id: schoolId, courseId, milestoneId } = await params;
 
     const milestoneIdNum = parseInt(milestoneId);
     if (isNaN(milestoneIdNum)) notFound();

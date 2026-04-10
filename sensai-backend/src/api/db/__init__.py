@@ -35,6 +35,8 @@ from api.config import (
     hub_threads_table_name,
     hub_replies_table_name,
     hub_thread_embeddings_table_name,
+    hub_poll_options_table_name,
+    hub_poll_votes_table_name,
 )
 from api.db.migration import run_migrations
 
@@ -660,6 +662,7 @@ async def create_hub_threads_table(cursor):
                 author_id INTEGER NOT NULL,
                 title TEXT NOT NULL,
                 content TEXT NOT NULL,
+                thread_type TEXT NOT NULL DEFAULT 'question',
                 status TEXT NOT NULL DEFAULT 'open',
                 upvote_count INTEGER DEFAULT 0,
                 reply_count INTEGER DEFAULT 0,
@@ -739,6 +742,46 @@ async def create_hub_thread_embeddings_table(cursor):
     )
 
 
+async def create_hub_poll_options_table(cursor):
+    await cursor.execute(
+        f"""CREATE TABLE IF NOT EXISTS {hub_poll_options_table_name} (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                thread_id  INTEGER NOT NULL,
+                text       TEXT    NOT NULL,
+                vote_count INTEGER NOT NULL DEFAULT 0,
+                position   INTEGER NOT NULL DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                deleted_at DATETIME,
+                FOREIGN KEY (thread_id) REFERENCES {hub_threads_table_name}(id) ON DELETE CASCADE
+            )"""
+    )
+    await cursor.execute(
+        f"CREATE INDEX IF NOT EXISTS idx_hub_poll_opt_thread ON {hub_poll_options_table_name} (thread_id)"
+    )
+
+
+async def create_hub_poll_votes_table(cursor):
+    await cursor.execute(
+        f"""CREATE TABLE IF NOT EXISTS {hub_poll_votes_table_name} (
+                id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                thread_id INTEGER NOT NULL,
+                option_id INTEGER NOT NULL,
+                user_id   INTEGER NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (thread_id) REFERENCES {hub_threads_table_name}(id) ON DELETE CASCADE,
+                FOREIGN KEY (option_id) REFERENCES {hub_poll_options_table_name}(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id)   REFERENCES {users_table_name}(id) ON DELETE CASCADE,
+                UNIQUE (thread_id, user_id)
+            )"""
+    )
+    await cursor.execute(
+        f"CREATE INDEX IF NOT EXISTS idx_hub_poll_vote_opt  ON {hub_poll_votes_table_name} (option_id)"
+    )
+    await cursor.execute(
+        f"CREATE INDEX IF NOT EXISTS idx_hub_poll_vote_user ON {hub_poll_votes_table_name} (thread_id, user_id)"
+    )
+
+
 async def init_db():
     # Ensure the database folder exists
     db_folder = os.path.dirname(sqlite_db_path)
@@ -805,6 +848,8 @@ async def init_db():
             await create_hub_threads_table(cursor)
             await create_hub_replies_table(cursor)
             await create_hub_thread_embeddings_table(cursor)
+            await create_hub_poll_options_table(cursor)
+            await create_hub_poll_votes_table(cursor)
 
             await conn.commit()
 

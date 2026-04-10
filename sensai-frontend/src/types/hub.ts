@@ -1,4 +1,5 @@
 export type HubThreadStatus = "open" | "resolved" | "closed";
+export type HubThreadType = "question" | "poll";
 
 export interface HubAuthor {
     id: number;
@@ -25,6 +26,7 @@ export interface HubThread {
     title: string;
     content: string;
     status: HubThreadStatus;
+    thread_type: HubThreadType;
     upvote_count: number;
     reply_count: number;
     has_verified_reply: boolean;
@@ -43,9 +45,28 @@ export interface CreateThreadPayload {
     author_id: number;
     title: string;
     content: string;
+    thread_type: HubThreadType;
+    poll_options?: string[];
 }
 
 export interface CreateReplyPayload {
     author_id: number;
     content: string;
+}
+
+// ── Poll types ────────────────────────────────────────────────────────────────
+
+export interface PollOption {
+    id: number;
+    text: string;
+    vote_count: number;
+    position: number;
+    voted: boolean;
+}
+
+export interface PollResult {
+    total_votes: number;
+    user_voted: boolean;
+    user_option_id: number | null;
+    options: PollOption[];
 }
